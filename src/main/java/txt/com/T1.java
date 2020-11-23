@@ -7,7 +7,9 @@ public class T1 {
 		
 System.out.println("one")
 		System.out.println("two");
-		System.out.println("three");
+				System.out.println("ten");
+
+		
 
 	
 	}
