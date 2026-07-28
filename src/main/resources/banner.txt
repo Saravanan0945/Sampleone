@@ -1,0 +1,42 @@
+
+  ____                            _         _   _   _   _     
+ / ___|  ___  ___ _   _ _ __ ___  / \  _   _| |_| |_| | | |    
+ \___ \ / _ \/ __| | | | '__/ _ \/ _ \| | | | __| __| |_| |    
+  ___) |  __/ (__| |_| | | |  __/ ___ \ |_| | |_| |_|  _  |    
+ |____/ \___|\___|\__,_|_|  \___/_/   \_\__,_|\__|\__|_| |_|    
+                                                                
+ ╔═══════════════════════════════════════════════════════════╗
+ ║     Secure User Authentication System v1.0.0              ║
+ ║     Spring Boot ${spring-boot.version}                    ║
+ ║     Powered by Spring Security & JWT                      ║
+ ╚═══════════════════════════════════════════════════════════╝
+
+ :: Application Name    :: ${spring.application.name}
+ :: Server Port          :: ${server.port}
+ :: Active Profile       :: ${spring.profiles.active:default}
+ :: Java Version         :: ${java.version}
+ :: Environment          :: ${ENVIRONMENT:development}
+
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 
+ 🔐 Security Features:
+    ✓ JWT Authentication
+    ✓ BCrypt Password Hashing
+    ✓ Account Lockout Protection
+    ✓ Rate Limiting
+    ✓ Session Management
+    ✓ CORS Protection
+    ✓ Input Sanitization
+
+ 📚 API Documentation:
+    Swagger UI: http://localhost:${server.port}/swagger-ui.html
+    API Docs:   http://localhost:${server.port}/api-docs
+
+ 🏥 Health Check:
+    Actuator:   http://localhost:${server.port}/actuator/health
+
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Status: Application is starting...
+
+
