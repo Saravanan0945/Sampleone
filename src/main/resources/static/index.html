@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Authentication System</title>
+    <script>
+        // Redirect to login page if not authenticated, otherwise to profile
+        window.onload = function() {
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (token) {
+                window.location.href = '/profile.html';
+            } else {
+                window.location.href = '/login.html';
+            }
+        };
+    </script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px;">
+        <h2>Redirecting...</h2>
+        <p>Please wait while we redirect you to the appropriate page.</p>
+    </div>
+</body>
+</html>
+
