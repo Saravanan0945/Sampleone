@@ -39,8 +39,9 @@ public class SecurityConfig {
             "/api/auth/register",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
-            "/api/auth/refresh-token",
+            "/api/auth/refresh",
             "/api/auth/verify-email",
+            "/api/auth/health",
             "/",
             "/index.html",
             "/login.html",
@@ -51,7 +52,11 @@ public class SecurityConfig {
             "/js/**",
             "/images/**",
             "/favicon.ico",
-            "/error"
+            "/error",
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/v3/api-docs/**",
+            "/api-docs/**"
     };
 
     @Bean
@@ -104,4 +109,3 @@ public class SecurityConfig {
         return source;
     }
 }
-
