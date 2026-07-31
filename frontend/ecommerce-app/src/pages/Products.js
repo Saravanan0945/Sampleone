@@ -2,13 +2,13 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
-import { getAllProducts } from '../services/productService';
+import productService from '../services/productService';
 import './Products.css';
 
 const Products = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useContext(AuthContext);
-  const { addToCart } = useContext(CartContext);
+  const { addToCart, cartCount } = useContext(CartContext);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ const Products = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await getAllProducts();
+      const data = await productService.getAllProducts();
       setProducts(data);
       
       // Initialize quantities for all products
@@ -88,6 +88,10 @@ const Products = () => {
     }
   };
 
+  const handleGoToCart = () => {
+    navigate('/cart');
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -108,6 +112,21 @@ const Products = () => {
 
   return (
     <div className="products-container">
+      {/* Go to Cart Button - Fixed Position */}
+      {isAuthenticated && (
+        <button 
+          className="go-to-cart-btn" 
+          onClick={handleGoToCart}
+          title="View Cart"
+        >
+          <span className="cart-icon">🛒</span>
+          <span className="cart-text">Cart</span>
+          {cartCount > 0 && (
+            <span className="cart-badge">{cartCount}</span>
+          )}
+        </button>
+      )}
+
       <div className="products-header">
         <h1>Our Products</h1>
         <p>Browse our collection of quality products</p>

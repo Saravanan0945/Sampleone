@@ -1,12 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { register } from '../services/authService';
+import authService from '../services/authService';
 import '../styles/Auth.css';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { login: authLogin } = useContext(AuthContext);
+  const { register: authRegister } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -14,7 +14,6 @@ const Register = () => {
     password: '',
     confirmPassword: ''
   });
-  
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,20 +31,30 @@ const Register = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters long';
+    if (!formData.username) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
     }
 
-    if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long';
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
@@ -54,7 +63,8 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setErrors({});
+
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -62,19 +72,22 @@ const Register = () => {
     }
 
     setIsLoading(true);
-    setErrors({});
 
     try {
-      const response = await register(
+      const response = await authService.register(
         formData.username,
         formData.email,
         formData.password
       );
-      authLogin(response.token);
+      authRegister(response.token, response);
       navigate('/products');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
-      setErrors({ submit: errorMessage });
+      if (err.message) {
+        setErrors({ general: err.message });
+      } else {
+        setErrors({ general: 'Registration failed. Please try again.' });
+      }
+      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -83,12 +96,19 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2 className="auth-title">Create Account</h2>
-        <p className="auth-subtitle">Sign up to get started</p>
-        
+        <div className="auth-header">
+          <h1>Create Account</h1>
+          <p>Sign up to get started</p>
+        </div>
+
         <form onSubmit={handleSubmit} className="auth-form">
-          {errors.submit && <div className="error-message">{errors.submit}</div>}
-          
+          {errors.general && (
+            <div className="error-message">
+              <span className="error-icon">⚠</span>
+              {errors.general}
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -98,14 +118,17 @@ const Register = () => {
               value={formData.username}
               onChange={handleChange}
               placeholder="Choose a username"
+              disabled={isLoading}
+              className={errors.username ? 'error' : ''}
               required
-              autoComplete="username"
             />
-            {errors.username && <span className="field-error">{errors.username}</span>}
+            {errors.username && (
+              <span className="field-error">{errors.username}</span>
+            )}
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email Address</label>
             <input
               type="email"
               id="email"
@@ -113,10 +136,13 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
+              disabled={isLoading}
+              className={errors.email ? 'error' : ''}
               required
-              autoComplete="email"
             />
-            {errors.email && <span className="field-error">{errors.email}</span>}
+            {errors.email && (
+              <span className="field-error">{errors.email}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -127,11 +153,14 @@ const Register = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Create a password"
+              placeholder="Create a password (min. 6 characters)"
+              disabled={isLoading}
+              className={errors.password ? 'error' : ''}
               required
-              autoComplete="new-password"
             />
-            {errors.password && <span className="field-error">{errors.password}</span>}
+            {errors.password && (
+              <span className="field-error">{errors.password}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -143,10 +172,13 @@ const Register = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm your password"
+              disabled={isLoading}
+              className={errors.confirmPassword ? 'error' : ''}
               required
-              autoComplete="new-password"
             />
-            {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
+            {errors.confirmPassword && (
+              <span className="field-error">{errors.confirmPassword}</span>
+            )}
           </div>
 
           <button 
@@ -154,13 +186,23 @@ const Register = () => {
             className="auth-button"
             disabled={isLoading}
           >
-            {isLoading ? 'Creating Account...' : 'Sign Up'}
+            {isLoading ? (
+              <>
+                <span className="spinner"></span>
+                Creating Account...
+              </>
+            ) : (
+              'Create Account'
+            )}
           </button>
-        </form>
 
-        <div className="auth-redirect">
-          <p>Already have an account? <Link to="/login">Sign In</Link></p>
-        </div>
+          <div className="auth-links">
+            <p>Already have an account?</p>
+            <Link to="/login" className="auth-link">
+              Login Here
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   );
