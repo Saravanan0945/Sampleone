@@ -6,13 +6,14 @@ using Microsoft.IdentityModel.Tokens;
 using ECommerceAPI.Data;
 using ECommerceAPI.Models;
 using ECommerceAPI.DTOs;
+using ECommerceAPI.Exceptions;
 
 namespace ECommerceAPI.Services;
 
 public interface IAuthService
 {
-    Task<LoginResponseDto?> LoginAsync(LoginDto loginDto);
-    Task<UserDto?> RegisterAsync(RegisterDto registerDto);
+    Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto);
+    Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
     Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto);
     Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
 }
@@ -28,53 +29,23 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
-    {
-        var user = await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => 
-                u.Username == loginDto.UsernameOrEmail || 
-                u.Email == loginDto.UsernameOrEmail);
-
-        if (user == null || !user.IsActive)
-            return null;
-
-        if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
-            return null;
-
-        user.LastLoginAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        var token = GenerateJwtToken(user);
-
-        return new LoginResponseDto
-        {
-            Token = token,
-            User = new UserDto
-            {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = user.Role.Name,
-                CreatedAt = user.CreatedAt,
-                LastLoginAt = user.LastLoginAt
-            }
-        };
-    }
-
-    public async Task<UserDto?> RegisterAsync(RegisterDto registerDto)
+    public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
     {
         if (await _context.Users.AnyAsync(u => u.Username == registerDto.Username))
-            return null;
+        {
+            throw new ValidationException("Username already exists");
+        }
 
         if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
-            return null;
+        {
+            throw new ValidationException("Email already exists");
+        }
 
         var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Customer");
         if (customerRole == null)
-            return null;
+        {
+            throw new InvalidOperationException("Customer role not found in database");
+        }
 
         var user = new User
         {
@@ -100,34 +71,123 @@ public class AuthService : IAuthService
         _context.Carts.Add(cart);
         await _context.SaveChangesAsync();
 
-        return new UserDto
+        user.Role = customerRole;
+        var token = GenerateJwtToken(user);
+
+        return new AuthResponseDto
         {
-            Id = user.Id,
+            Token = token,
             Username = user.Username,
             Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Role = customerRole.Name,
-            CreatedAt = user.CreatedAt
+            Role = customerRole.Name
+        };
+    }
+
+    public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
+    {
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => 
+                u.Username == loginDto.UsernameOrEmail || 
+                u.Email == loginDto.UsernameOrEmail);
+
+        if (user == null)
+        {
+            throw new AuthenticationException("Invalid credentials");
+        }
+
+        if (!user.IsActive)
+        {
+            throw new AuthenticationException("User account is inactive");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+        {
+            throw new AuthenticationException("Invalid credentials");
+        }
+
+        user.LastLoginAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var token = GenerateJwtToken(user);
+
+        return new AuthResponseDto
+        {
+            Token = token,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role.Name
         };
     }
 
     public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == forgotPasswordDto.Email);
-        if (user == null || !user.IsActive)
-            return false;
+        
+        if (user == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+
+        if (!user.IsActive)
+        {
+            throw new AuthenticationException("User account is inactive");
+        }
+
+        var existingTokens = await _context.PasswordResetTokens
+            .Where(t => t.UserId == user.Id && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync();
+
+        foreach (var existingToken in existingTokens)
+        {
+            existingToken.IsUsed = true;
+        }
+
+        var resetToken = new PasswordResetToken
+        {
+            UserId = user.Id,
+            Token = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            IsUsed = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.PasswordResetTokens.Add(resetToken);
+        await _context.SaveChangesAsync();
 
         return true;
     }
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == resetPasswordDto.Email);
+        var resetToken = await _context.PasswordResetTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == resetPasswordDto.Token);
+
+        if (resetToken == null)
+        {
+            throw new ValidationException("Invalid token");
+        }
+
+        if (resetToken.IsUsed)
+        {
+            throw new ValidationException("Token has already been used");
+        }
+
+        if (resetToken.ExpiresAt < DateTime.UtcNow)
+        {
+            throw new ValidationException("Token has expired");
+        }
+
+        var user = resetToken.User;
         if (user == null || !user.IsActive)
-            return false;
+        {
+            throw new NotFoundException("User not found");
+        }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPasswordDto.NewPassword);
+        resetToken.IsUsed = true;
+        
         await _context.SaveChangesAsync();
 
         return true;

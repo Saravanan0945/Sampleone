@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using ECommerceAPI.Exceptions;
 
 namespace ECommerceAPI.Middleware;
 
@@ -22,7 +23,7 @@ public class ErrorHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred");
+            _logger.LogError(ex, "An exception occurred: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -30,10 +31,36 @@ public class ErrorHandlingMiddleware
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         var code = HttpStatusCode.InternalServerError;
+        var message = "An error occurred while processing your request";
+
+        switch (exception)
+        {
+            case AuthenticationException:
+                code = HttpStatusCode.Unauthorized;
+                message = exception.Message;
+                break;
+            case ValidationException:
+                code = HttpStatusCode.BadRequest;
+                message = exception.Message;
+                break;
+            case NotFoundException:
+                code = HttpStatusCode.NotFound;
+                message = exception.Message;
+                break;
+            case InvalidOperationException:
+                code = HttpStatusCode.BadRequest;
+                message = exception.Message;
+                break;
+            case UnauthorizedAccessException:
+                code = HttpStatusCode.Forbidden;
+                message = exception.Message;
+                break;
+        }
+
         var result = JsonSerializer.Serialize(new
         {
-            error = "An error occurred while processing your request",
-            message = exception.Message
+            error = message,
+            statusCode = (int)code
         });
 
         context.Response.ContentType = "application/json";
