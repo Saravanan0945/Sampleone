@@ -1,0 +1,133 @@
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.error-icon {
+  font-size: 1.25rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.error-text {
+  line-height: 1.5;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-left: 1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.error-close:hover {
+  opacity: 1;
+}
+
+/* Error type */
+.error-message.error {
+  background: #fee;
+  border-left: 4px solid #dc3545;
+  color: #721c24;
+}
+
+.error-message.error .error-icon {
+  color: #dc3545;
+}
+
+.error-message.error .error-close {
+  color: #721c24;
+}
+
+/* Success type */
+.error-message.success {
+  background: #d4edda;
+  border-left: 4px solid #28a745;
+  color: #155724;
+}
+
+.error-message.success .error-icon {
+  color: #28a745;
+}
+
+.error-message.success .error-close {
+  color: #155724;
+}
+
+/* Warning type */
+.error-message.warning {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+}
+
+.error-message.warning .error-icon {
+  color: #ffc107;
+}
+
+.error-message.warning .error-close {
+  color: #856404;
+}
+
+/* Info type */
+.error-message.info {
+  background: #d1ecf1;
+  border-left: 4px solid #17a2b8;
+  color: #0c5460;
+}
+
+.error-message.info .error-icon {
+  color: #17a2b8;
+}
+
+.error-message.info .error-close {
+  color: #0c5460;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .error-message {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .error-icon {
+    font-size: 1.1rem;
+  }
+
+  .error-close {
+    font-size: 1.1rem;
+  }
+}
+
