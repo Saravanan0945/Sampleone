@@ -18,6 +18,9 @@ public class CartController : ControllerBase
         _cartService = cartService;
     }
 
+    /// <summary>
+    /// Get the current user's shopping cart
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetCart()
     {
@@ -25,47 +28,47 @@ public class CartController : ControllerBase
         if (userId == null)
             return Unauthorized(new { message = "User not authenticated" });
 
-        var cart = await _cartService.GetUserCartAsync(userId.Value);
-        if (cart == null)
-            return NotFound(new { message = "Cart not found" });
-
+        var cart = await _cartService.GetCartAsync(userId.Value);
         return Ok(cart);
     }
 
+    /// <summary>
+    /// Add a product to the shopping cart
+    /// </summary>
     [HttpPost("items")]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartDto addToCartDto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         var userId = GetUserId();
         if (userId == null)
             return Unauthorized(new { message = "User not authenticated" });
-
-        if (addToCartDto.ProductId <= 0 || addToCartDto.Quantity <= 0)
-            return BadRequest(new { message = "Invalid product or quantity" });
 
         var cart = await _cartService.AddToCartAsync(userId.Value, addToCartDto);
-        if (cart == null)
-            return BadRequest(new { message = "Failed to add item to cart. Product may not exist or insufficient stock." });
-
         return Ok(cart);
     }
 
-    [HttpPut("items/{cartItemId}")]
-    public async Task<IActionResult> UpdateCartItem(int cartItemId, [FromBody] UpdateCartItemDto updateCartItemDto)
+    /// <summary>
+    /// Update the quantity of a cart item
+    /// </summary>
+    [HttpPut("items")]
+    public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemDto updateCartItemDto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         var userId = GetUserId();
         if (userId == null)
             return Unauthorized(new { message = "User not authenticated" });
 
-        if (updateCartItemDto.Quantity < 0)
-            return BadRequest(new { message = "Invalid quantity" });
-
-        var cart = await _cartService.UpdateCartItemAsync(userId.Value, cartItemId, updateCartItemDto);
-        if (cart == null)
-            return BadRequest(new { message = "Failed to update cart item. Item may not exist or insufficient stock." });
-
+        var cart = await _cartService.UpdateCartItemAsync(userId.Value, updateCartItemDto);
         return Ok(cart);
     }
 
+    /// <summary>
+    /// Remove an item from the shopping cart
+    /// </summary>
     [HttpDelete("items/{cartItemId}")]
     public async Task<IActionResult> RemoveFromCart(int cartItemId)
     {
@@ -74,12 +77,12 @@ public class CartController : ControllerBase
             return Unauthorized(new { message = "User not authenticated" });
 
         var result = await _cartService.RemoveFromCartAsync(userId.Value, cartItemId);
-        if (!result)
-            return NotFound(new { message = "Cart item not found" });
-
-        return Ok(new { message = "Item removed from cart successfully" });
+        return Ok(new { message = "Item removed from cart successfully", success = result });
     }
 
+    /// <summary>
+    /// Clear all items from the shopping cart
+    /// </summary>
     [HttpDelete]
     public async Task<IActionResult> ClearCart()
     {
@@ -88,10 +91,7 @@ public class CartController : ControllerBase
             return Unauthorized(new { message = "User not authenticated" });
 
         var result = await _cartService.ClearCartAsync(userId.Value);
-        if (!result)
-            return NotFound(new { message = "Cart not found" });
-
-        return Ok(new { message = "Cart cleared successfully" });
+        return Ok(new { message = "Cart cleared successfully", success = result });
     }
 
     private int? GetUserId()
