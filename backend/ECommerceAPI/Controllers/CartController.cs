@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ECommerceAPI.DTOs;
 using ECommerceAPI.Services;
+using ECommerceAPI.Exceptions;
 
 namespace ECommerceAPI.Controllers;
 
@@ -24,76 +25,150 @@ public class CartController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetCart()
     {
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new { message = "User not authenticated" });
+        try
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized(new { error = "User not authenticated" });
 
-        var cart = await _cartService.GetCartAsync(userId.Value);
-        return Ok(cart);
+            var cart = await _cartService.GetCartAsync(userId.Value);
+            return Ok(cart);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while retrieving the cart" });
+        }
     }
 
     /// <summary>
     /// Add a product to the shopping cart
     /// </summary>
-    [HttpPost("items")]
+    [HttpPost("add")]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartDto addToCartDto)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new { message = "User not authenticated" });
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized(new { error = "User not authenticated" });
 
-        var cart = await _cartService.AddToCartAsync(userId.Value, addToCartDto);
-        return Ok(cart);
+            var cart = await _cartService.AddToCartAsync(userId.Value, addToCartDto);
+            return Ok(cart);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while adding to cart" });
+        }
     }
 
     /// <summary>
     /// Update the quantity of a cart item
     /// </summary>
-    [HttpPut("items")]
+    [HttpPut("update")]
     public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemDto updateCartItemDto)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new { message = "User not authenticated" });
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized(new { error = "User not authenticated" });
 
-        var cart = await _cartService.UpdateCartItemAsync(userId.Value, updateCartItemDto);
-        return Ok(cart);
+            var cart = await _cartService.UpdateCartItemAsync(userId.Value, updateCartItemDto);
+            return Ok(cart);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while updating the cart" });
+        }
     }
 
     /// <summary>
     /// Remove an item from the shopping cart
     /// </summary>
-    [HttpDelete("items/{cartItemId}")]
+    [HttpDelete("remove/{cartItemId}")]
     public async Task<IActionResult> RemoveFromCart(int cartItemId)
     {
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new { message = "User not authenticated" });
+        try
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized(new { error = "User not authenticated" });
 
-        var result = await _cartService.RemoveFromCartAsync(userId.Value, cartItemId);
-        return Ok(new { message = "Item removed from cart successfully", success = result });
+            await _cartService.RemoveFromCartAsync(userId.Value, cartItemId);
+            return NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while removing from cart" });
+        }
     }
 
     /// <summary>
     /// Clear all items from the shopping cart
     /// </summary>
-    [HttpDelete]
+    [HttpDelete("clear")]
     public async Task<IActionResult> ClearCart()
     {
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new { message = "User not authenticated" });
+        try
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized(new { error = "User not authenticated" });
 
-        var result = await _cartService.ClearCartAsync(userId.Value);
-        return Ok(new { message = "Cart cleared successfully", success = result });
+            await _cartService.ClearCartAsync(userId.Value);
+            return NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while clearing the cart" });
+        }
     }
 
+    /// <summary>
+    /// Extract user ID from JWT claims
+    /// </summary>
     private int? GetUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
