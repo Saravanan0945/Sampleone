@@ -86,6 +86,9 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.EnsureCreated();
+    
+    // Seed initial product data
+    await DbInitializer.SeedData(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
